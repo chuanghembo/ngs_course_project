@@ -1,0 +1,71 @@
+## Library
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+```
+
+## Load data
+
+```{r}
+data_path <- "../CountMatrixRefAlligned.tsv"
+meta_path <-"../meta_data.csv"
+
+
+count_matrix <- read.csv(data_path, 
+                         row.names = "Geneid", 
+                         sep = '\t') |> 
+        as.matrix()
+
+meta_data <- read.csv(meta_path,
+                      row.names = 1)
+
+```
+
+Convert the columns in metadata to factor
+
+```{r}
+meta_data <-  meta_data |> 
+              mutate(condition = factor(condition))
+```
+
+## Check data format
+
+In DESeq2, the colnames of the count-matrix must be the same and in same order as the rownames of the meta_data
+
+```{r}
+all(rownames(meta_data) == colnames(data))
+```
+
+## DEseq2 analysis
+
+DEseq find
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = count_matrix,
+                              colData = meta_data,
+                              design = ~ condition)
+
+dds <- DESeq(dds)
+
+
+
+res <- results(dds, 
+               contrast= c('condition', 'PPM1DT_leukemia', 'wild_type'),
+               tidy = TRUE) 
+
+
+# p.adj
+# log2fc > 1
+res_clean <- res |> 
+        na.omit() |> 
+        filter(log2FoldChange > 1,
+               padj < 0.05) 
+
+vsd <- rlog(dds, blind=FALSE)
+plotPCA(vsd, intgroup=c("condition"))
+```
+
+```{r}
+meta_data
+```
