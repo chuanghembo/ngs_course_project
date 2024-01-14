@@ -54,19 +54,49 @@ dds <- DESeq(dds)
 Looking at result from DEseq
 
 ```{r}
-res <- results(dds, 
-               contrast= c('condition', 'PPM1DT_leukemia', 'wild_type'),
-               tidy = TRUE) 
+meta_data
 
+WTvsWTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'wild_type_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+
+WTvsPPM1DTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+PPM1DTLeukemiavsWTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type_leukemia'),
+                                          tidy = TRUE) 
 
 # p.adj
 # log2fc > 1
-res_clean <- res |> 
+WTvsWTLeukemia_clean <- WTvsWTLeukemia |> 
         na.omit() |> 
         filter(padj < 0.05,
-               abs(log2FoldChange) > 1) 
+               abs(log2FoldChange) > 1)
 
-res_clean
+WTvsPPM1DTLeukemia_clean <- WTvsPPM1DTLeukemia |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+PPM1DTLeukemiavsWTLeukemia_clean <- PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+
+#write.csv(WTvsWTLeukemia_clean, '../WT_vs_WTLeukemia.csv')
+#write.csv(WTvsPPM1DTLeukemia_clean, '../WT_vs_PPM1DTLeukemia.csv')
+#write.csv(PPM1DTLeukemiavsWTLeukemia_clean , '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv')
+
 ```
 
 ### **Variance stabilizing transformation**
@@ -96,6 +126,6 @@ plotPCA(vsd, intgroup=c("condition")) +
 ```{r}
 
 res_clean |> ggplot(aes(log2FoldChange, -log10(padj))) +
-        geom_point(10)
+        geom_point()
 
 ```
