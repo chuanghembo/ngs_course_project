@@ -26,12 +26,11 @@ ensembl_id <- WT_vs_WTLeukemia |>
         as.character()
 
 # list avalible Marts
-#listMarts()
-
-#ensembl=useMart("ensembl")
+# listMarts()
+# ensembl=useMart("ensembl")
 
 # List avalible databases
-#listDatasets(ensembl)
+listDatasets(ensembl)
 
 # Specify Mart
 ensembl=useMart("ensembl", dataset = 'mmusculus_gene_ensembl')
