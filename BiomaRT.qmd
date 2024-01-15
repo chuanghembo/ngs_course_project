@@ -59,12 +59,13 @@ id_chunks <- ensembl_id[1:100] |>
              nest(data = c(value))
 
 batch_query <- function(ids, mart) {
-  getBM(attributes = c('ensembl_gene_id_version', 
+  getBM(attributes = c('ensembl_gene_id_version',
+                       'ensembl_transcript_id_version',
                        'external_gene_name',
                        'go_id',
                        'name_1006',
                        'definition_1006'),
-        filters = 'ensembl_gene_id_version', 
+        filters = 'ensembl_transcript_id_version', 
         values = ids, 
         mart = mart)
 }
