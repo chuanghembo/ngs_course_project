@@ -30,4 +30,7 @@ ego <- enrichGO(gene = gene_list,
 go_results <- as.data.frame(ego@result)
 
 go_results
+
+
+# Just missing the plot like figure 4c in the paper. We need NES normalized enrichment score
 ```
