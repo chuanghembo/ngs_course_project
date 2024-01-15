@@ -1,0 +1,79 @@
+# Library
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+```
+
+```{r}
+data_path <- "../CountTranscript.tsv"
+meta_path <-"../meta_data_DEXseq.csv"
+
+
+count_matrix <- read.csv(data_path, 
+                         row.names = "Geneid", 
+                         sep = '\t') |> 
+        as.matrix()
+
+meta_data <- read.csv(meta_path,
+                      row.names = 1)
+```
+
+Convert the columns in metadata to factor and remove NA in count matrix
+
+```{r}
+meta_data <-  meta_data |> 
+              mutate(condition = factor(condition, 
+                                        levels = c('wild_type',
+                                                   'PPM1DT_leukemia',
+                                                   'wild_type_leukemia'
+                                                   )))
+count_matrix <- count_matrix |> 
+        na.omit()
+```
+
+## Check data format
+
+In DESeq2, the colnames of the count-matrix must be the same and in same order as the rownames of the meta_data
+
+```{r}
+all(rownames(meta_data) == colnames(count_matrix))
+```
+
+## DEseq2 analysis
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = count_matrix,
+                              colData = meta_data,
+                              design = ~ condition)
+
+dds <- DESeq(dds)
+```
+
+## Variance Stabilizing Transformation
+
+```{r}
+vsd <- rlog(dds, blind=FALSE)
+```
+
+```{r}
+plotPCA(vsd, intgroup=c("condition")) +
+        scale_color_manual(
+                values = c("chartreuse3", "red", "black"),
+                name = "group", 
+                labels = c("Health",
+                           expression(Ppm1d^"T/-"),
+                           "WT")
+                ) +
+        theme_minimal() +
+        theme(legend.text.align = 0,
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 0.5),
+              axis.ticks = element_line(size = 0.5,
+                                        linetype = 'solid',
+                                        color = 'black')) 
+```
+
+##   

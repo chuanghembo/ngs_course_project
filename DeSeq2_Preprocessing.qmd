@@ -130,7 +130,7 @@ plotPCA(vsd, intgroup=c("condition")) +
                                         color = 'black')) 
 ```
 
-###  Volcano plot
+### Volcano plot
 
 ```{r}
 
