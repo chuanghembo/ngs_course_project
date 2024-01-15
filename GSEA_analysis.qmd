@@ -1,0 +1,35 @@
+## Load packages
+
+```{r}
+library(tidyverse)
+library(clusterProfiler)
+library(org.Mm.eg.db)
+library(enrichplot)
+```
+
+## Load data
+
+```{r}
+data_path <- '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv'
+annotated_res <- read_csv(data_path)
+
+annotated_res
+
+gene_list <- annotated_res |>
+        mutate(gene = str_remove(row, "\\..*")) |> 
+        pull(gene)
+```
+
+```{r}
+ego <- enrichGO(gene = gene_list,
+                OrgDb = org.Mm.eg.db,
+                keyType = "ENSEMBL",
+                ont = "BP",  
+                # Biological Process, can also be "CC" (Cellular Component) or "MF"(Molecular Function)
+                pAdjustMethod = "BH",
+               qvalueCutoff = 0.05)
+ego
+
+goplot(ego)
+dotplot(ego, showCategory=10)
+```
