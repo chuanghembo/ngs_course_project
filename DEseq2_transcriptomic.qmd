@@ -62,7 +62,7 @@ plotPCA(vsd, intgroup=c("condition")) +
                 values = c("chartreuse3", "red", "black"),
                 name = "group", 
                 labels = c("Health",
-                           expression(Ppm1d^"T/-"),
+                           expression(Ppm1d^"T/+"),
                            "WT")
                 ) +
         theme_minimal() +
