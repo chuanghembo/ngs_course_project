@@ -13,8 +13,6 @@ library(enrichplot)
 data_path <- '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv'
 annotated_res <- read_csv(data_path)
 
-annotated_res
-
 gene_list <- annotated_res |>
         mutate(gene = str_remove(row, "\\..*")) |> 
         pull(gene)
@@ -28,8 +26,8 @@ ego <- enrichGO(gene = gene_list,
                 # Biological Process, can also be "CC" (Cellular Component) or "MF"(Molecular Function)
                 pAdjustMethod = "BH",
                qvalueCutoff = 0.05)
-ego
 
-goplot(ego)
-dotplot(ego, showCategory=10)
+go_results <- as.data.frame(ego@result)
+
+go_results
 ```
