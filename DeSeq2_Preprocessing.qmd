@@ -130,7 +130,7 @@ plotPCA(vsd, intgroup=c("condition")) +
                                         color = 'black')) 
 ```
 
-###  Volcano plot
+### Volcano plot
 
 ```{r}
 
@@ -154,11 +154,15 @@ PPM1DTLeukemiavsWTLeukemia |>
                gene = row) |>
         dplyr::select(-row) |> 
         ggplot(aes(log2FoldChange, -log10(padj))) +
-        geom_point(aes(color = catagory)) + 
-         geom_label_repel(aes(label = ifelse(Top10, gene, "")),
-                   nudge_x = 0.4, nudge_y = 0.4,  # Adjust these values as needed
+        geom_point(aes(color = catagory), size = 3) +
+        geom_point(aes(shape = ifelse(Top10, "", gene))) +
+        geom_label_repel(aes(label = ifelse(Top10, gene, "")),
+                   nudge_x = 0.1, nudge_y = 0.1,  # Adjust these values as needed
                    point.padding = 0.5,
-                   size = 3,  # Adjust text size
+                   box.padding = unit(0.1, "cm"),
+                   label.size = unit(0.05, "cm"),
+                   force = 15,
+                   size = 5,  # Adjust text size
                    color = "black",
                    max.overlaps = 1000) +  # Adjust text color +
         geom_vline(xintercept = -1, 
@@ -173,7 +177,7 @@ PPM1DTLeukemiavsWTLeukemia |>
                    color = 'black', 
                    linetype = 'dashed',
                    size = 1) +
-        scale_color_manual(values = c('blue','gray','red' )) +
+        scale_color_manual(values = c('blue','gray','red')) + 
         theme_minimal() +
         theme(legend.position = 'none',
               panel.grid = element_blank(),
@@ -181,7 +185,8 @@ PPM1DTLeukemiavsWTLeukemia |>
                                        linetype = 'solid',
                                        size = 1),
               axis.ticks = element_line(color = "black", 
-                                        size = 1)) 
+                                        size = 1)) + 
+        ylim(c(0, 80))
 
-
+ggsave(filename = "volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
 ```
