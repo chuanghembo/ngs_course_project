@@ -133,7 +133,36 @@ plotPCA(vsd, intgroup=c("condition")) +
 ### Volcano plot
 
 ```{r}
+#load annotation
+anno <- read.csv('../PPM1DTLeukemia_vs_WTLeukemia_annot.csv')
 
+# select significant genes
+siggene <- PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        mutate(catagory = case_when(
+                (padj < 0.05 & log2FoldChange > 1) ~ 'upreg',
+                (padj < 0.05 & log2FoldChange < -1) ~ 'downreg',TRUE ~ 'none_sig'),
+               Top10 = case_when(
+                       log2FoldChange > 12 ~ TRUE,
+                       -log10(padj) > 25 & log2FoldChange > 1 ~ TRUE,TRUE ~ FALSE),gene = row) |> 
+        arrange(pvalue) |> 
+        filter(Top10 == 'TRUE') |> 
+        dplyr::select(gene) 
+
+#annotate
+siggene <- siggene |> 
+        mutate(external_gene_name = c('ZBED3','Marcks','Ly6d','Extl3','Igf2bp3','Runx3','Pcbp4','Plch1','Rgs7bp','A630031M04Rik','Gdf6','Insm1','Hnf1b'))
+
+#full join
+anno <- anno |> 
+        full_join(siggene,  by= c('ensembl_gene_id_version' = 'gene') )
+#match the table and change the row name
+PPM1DTLeukemiavsWTLeukemia$row <- ifelse(PPM1DTLeukemiavsWTLeukemia$row %in% anno$ensembl_gene_id_version, 
+                     anno$external_gene_name.y[match(PPM1DTLeukemiavsWTLeukemia$row, anno$ensembl_gene_id_version)],
+                     PPM1DTLeukemiavsWTLeukemia$row)
+```
+
+```{r}
 vlines <- data.frame(xintercepts = c(-1, 1), colors = c('gray', 'gray'))
 
 
