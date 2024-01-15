@@ -119,10 +119,18 @@ plotPCA(vsd, intgroup=c("condition")) +
                            expression(Ppm1d^"T/-"),
                            "WT")
                 ) +
-        theme(legend.text.align = 0)
+        theme_minimal() +
+        theme(legend.text.align = 0,
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 0.5),
+              axis.ticks = element_line(size = 0.5,
+                                        linetype = 'solid',
+                                        color = 'black')) 
 ```
 
-### Volcano plot
+###  Volcano plot
 
 ```{r}
 
@@ -133,22 +141,22 @@ vlines <- data.frame(xintercepts = c(-1, 1), colors = c('gray', 'gray'))
 # Blue FDR < 0.05 && log2FC < -1
 # Gray otherwise
 
-# Display genename of the top 10 genes
+# Display -log10(padj) > 25 and log2FC > 1 or log2FC log2FC > 12
 
 PPM1DTLeukemiavsWTLeukemia |> 
         na.omit() |> 
         mutate(catagory = case_when((padj < 0.05 & log2FoldChange > 1) ~ 'upreg',
                                    (padj < 0.05 & log2FoldChange < -1) ~ 'downreg',
                                    TRUE ~ 'none_sig'),
-               Top10 = case_when(log2FoldChange > 12 & log2FoldChange > 1 ~ TRUE,
+               Top10 = case_when(log2FoldChange > 12 ~ TRUE,
                                  -log10(padj) > 25 & log2FoldChange > 1 ~ TRUE,
                                  TRUE ~ FALSE),
-               gene = row)|>
-        select(-row) |> 
+               gene = row) |>
+        dplyr::select(-row) |> 
         ggplot(aes(log2FoldChange, -log10(padj))) +
         geom_point(aes(color = catagory)) + 
          geom_label_repel(aes(label = ifelse(Top10, gene, "")),
-                   nudge_x = 0.2, nudge_y = 0.2,  # Adjust these values as needed
+                   nudge_x = 0.4, nudge_y = 0.4,  # Adjust these values as needed
                    point.padding = 0.5,
                    size = 3,  # Adjust text size
                    color = "black",
@@ -176,17 +184,4 @@ PPM1DTLeukemiavsWTLeukemia |>
                                         size = 1)) 
 
 
-```
-
-```{r}
-PPM1DTLeukemiavsWTLeukemia |> 
-        na.omit() |> 
-        arrange(-log2FoldChange) |>
-        filter(log2FoldChange > 1) 
-
-PPM1DTLeukemiavsWTLeukemia |> 
-        na.omit() |> 
-        dplyr::filter(log2FoldChange > 1) |> 
-        mutate(Rank = -log10(padj)) |> 
-        arrange(-Rank) 
 ```
