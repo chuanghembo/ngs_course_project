@@ -21,9 +21,7 @@ PPM1DTLeukemia_vs_WTLeukemia <- read.csv('../PPM1DTLeukemia_vs_WTLeukemia_clean.
 
 ```{r}
 # Get ensembl id
-ensembl_id <- WT_vs_WTLeukemia |> 
-        pull(row) |> 
-        as.character()
+ensembl_id <- c("", "", "")
 
 # list avalible Marts
 # listMarts()
