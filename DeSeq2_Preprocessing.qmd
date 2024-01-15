@@ -3,6 +3,7 @@
 ```{r}
 library(tidyverse)
 library(DESeq2)
+library(ggrepel)
 ```
 
 ## Load data
@@ -125,7 +126,67 @@ plotPCA(vsd, intgroup=c("condition")) +
 
 ```{r}
 
-res_clean |> ggplot(aes(log2FoldChange, -log10(padj))) +
-        geom_point()
+vlines <- data.frame(xintercepts = c(-1, 1), colors = c('gray', 'gray'))
 
+
+# Red FDR < 0.05 && log2FC > 1
+# Blue FDR < 0.05 && log2FC < -1
+# Gray otherwise
+
+# Display genename of the top 10 genes
+
+PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        mutate(catagory = case_when((padj < 0.05 & log2FoldChange > 1) ~ 'upreg',
+                                   (padj < 0.05 & log2FoldChange < -1) ~ 'downreg',
+                                   TRUE ~ 'none_sig'),
+               Top10 = case_when(log2FoldChange > 12 & log2FoldChange > 1 ~ TRUE,
+                                 -log10(padj) > 25 & log2FoldChange > 1 ~ TRUE,
+                                 TRUE ~ FALSE),
+               gene = row)|>
+        select(-row) |> 
+        ggplot(aes(log2FoldChange, -log10(padj))) +
+        geom_point(aes(color = catagory)) + 
+         geom_label_repel(aes(label = ifelse(Top10, gene, "")),
+                   nudge_x = 0.2, nudge_y = 0.2,  # Adjust these values as needed
+                   point.padding = 0.5,
+                   size = 3,  # Adjust text size
+                   color = "black",
+                   max.overlaps = 1000) +  # Adjust text color +
+        geom_vline(xintercept = -1, 
+                   color = 'black', 
+                   linetype = 'dashed', 
+                   size = 1) +
+        geom_vline(xintercept = 1, 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) +
+        geom_hline(yintercept = -log10(0.05), 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) +
+        scale_color_manual(values = c('blue','gray','red' )) +
+        theme_minimal() +
+        theme(legend.position = 'none',
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 1),
+              axis.ticks = element_line(color = "black", 
+                                        size = 1)) 
+
+
+```
+
+```{r}
+PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        arrange(-log2FoldChange) |>
+        filter(log2FoldChange > 1) 
+
+PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        dplyr::filter(log2FoldChange > 1) |> 
+        mutate(Rank = -log10(padj)) |> 
+        arrange(-Rank) 
 ```

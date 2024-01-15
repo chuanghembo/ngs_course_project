@@ -1,49 +1,20 @@
 library(tidyverse)
 library(biomaRt)
-library(parallel)
 
 WT_vs_WTLeukemia <- read.csv('../WT_vs_WTLeukemia.csv', row.names = 'X') 
 WT_vs_PPM1DTLeukemia <- read.csv('../WT_vs_PPM1DTLeukemia.csv', row.names = 'X')
 PPM1DTLeukemia_vs_WTLeukemia <- read.csv('../PPM1DTLeukemia_vs_WTLeukemia_clean.csv')
-
-#WT_vs_WTLeukemia
-#WT_vs_PPM1DTLeukemia
-#PPM1DTLeukemia_vs_WTLeukemia
 
 # Get ensembl id
 ensembl_id <- WT_vs_WTLeukemia |> 
         pull(row) |> 
         as.character()
 
-# list avalible Marts
-#listMarts()
-
-#ensembl=useMart("ensembl")
-
-# List avalible databases
-#listDatasets(ensembl)
-
 # Specify Mart
-ensembl=useMart("ensembl", dataset = 'mmusculus_gene_ensembl')
-
-# Explore avaliable fliters and attributes
-filters <- listFilters(ensembl)
-attr <- listAttributes(ensembl)
-
-# Find the ensembl filter
-filters |> as_tibble() |> 
-        filter(str_detect(name, 'ensembl'))
-
-# Find all terms containing Gene ontology
-attr |> as_tibble() |> 
-        filter(str_detect(description, 'GO'))
-
-#Find all term contains mouse
-attr |> as_tibble() |> 
-        filter(str_detect(name, 'mmusculus'))
+ensembl = useMart("ensembl", dataset = 'mmusculus_gene_ensembl')
 
 # Submit Ensembl id in chunks and merge the result in the end
-# Ensembl can take around 500-1000 ensembl at the time
+# Ensembl can take around 500-1000 ensembl ids at a time
 chunk_size <- 100
 
 id_chunks <- ensembl_id[1:100] |>  
@@ -51,8 +22,9 @@ id_chunks <- ensembl_id[1:100] |>
         mutate(chunk = ceiling(row_number() / chunk_size)) |> 
         nest(data = c(value))
 
+# Function for batch querying
 batch_query <- function(ids, mart) {
-        getBM(attributes = c('ensembl_gene_id', 
+        getBM(attributes = c('ensembl_gene_id_version', 
                              'external_gene_name',
                              'go_id',
                              'name_1006',
@@ -62,25 +34,11 @@ batch_query <- function(ids, mart) {
               mart = mart)
 }
 
-# Setup parallel cluster
-no_cores <- 2
-cl <- makeCluster(no_cores)
-clusterExport(cl, c("batch_query", "ensembl"))
-
-# Load biomaRt in each parallel worker
-clusterEvalQ(cl, {
-        library(biomaRt)
-        library(dplyr)
-        library(tidyr)
-})
-
-# Modify this part for parallel processing
+# Perform the batch querying
 gene_info <- id_chunks |> 
-        mutate(results = parLapply(cl, data, batch_query, mart = ensembl)) |> 
+        mutate(results = map(data, ~batch_query(.x$value, mart = ensembl))) |> 
         dplyr::select(results) |> 
         unnest(cols = c(results))
 
-# Close the cluster
-stopCluster(cl)
-
+# Write the results to a CSV file
 write.csv(gene_info, "../biomart_query_results.csv", row.names = FALSE)

@@ -3,7 +3,6 @@
 ```{r}
 library(tidyverse)
 library(biomaRt)
-library(parallel)
 ```
 
 ## Load Data
@@ -51,7 +50,7 @@ attr |> as_tibble() |>
 
 #Find all term contains mouse
 attr |> as_tibble() |> 
-        filter(str_detect(name, 'mmusculus'))
+        filter(str_detect(name, 'ensembl'))
 
 # Submit Ensembl id in chunks and merge the result in the end
 # Ensembl can take around 500-1000 ensembl at the time
@@ -63,7 +62,7 @@ id_chunks <- ensembl_id[1:100] |>
              nest(data = c(value))
 
 batch_query <- function(ids, mart) {
-  getBM(attributes = c('ensembl_gene_id', 
+  getBM(attributes = c('ensembl_gene_id_version', 
                        'external_gene_name',
                        'go_id',
                        'name_1006',
@@ -73,26 +72,12 @@ batch_query <- function(ids, mart) {
         mart = mart)
 }
 
-# Setup parallel cluster
-no_cores <- 2
-cl <- makeCluster(no_cores)
-clusterExport(cl, c("batch_query", "ensembl"))
-
-# Load biomaRt in each parallel worker
-clusterEvalQ(cl, {
-  library(biomaRt)
-  library(dplyr)
-  library(tidyr)
-})
-
 # Modify this part for parallel processing
 gene_info <- id_chunks |> 
-  mutate(results = parLapply(cl, data, batch_query, mart = ensembl)) |> 
-  dplyr::select(results) |> 
-  unnest(cols = c(results))
+        mutate(results = map(data, ~batch_query(.x$value, mart = ensembl))) |> 
+        dplyr::select(results) |> 
+        unnest(cols = c(results))
 
-# Close the cluster
-stopCluster(cl)
 
 write.csv(gene_info, "../biomart_query_results.csv", row.names = FALSE)
 ```
