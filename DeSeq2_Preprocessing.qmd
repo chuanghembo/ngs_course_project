@@ -185,15 +185,6 @@ PPM1DTLeukemiavsWTLeukemia |>
         ggplot(aes(log2FoldChange, -log10(padj))) +
         geom_point(aes(color = catagory), size = 3) +
         geom_point(aes(shape = ifelse(Top10, "", gene))) +
-        geom_label_repel(aes(label = ifelse(Top10, gene, "")),
-                   nudge_x = 0.1, nudge_y = 0.1,  # Adjust these values as needed
-                   point.padding = 0.5,
-                   box.padding = unit(0.1, "cm"),
-                   label.size = unit(0.05, "cm"),
-                   force = 15,
-                   size = 5,  # Adjust text size
-                   color = "black",
-                   max.overlaps = 1000) +  # Adjust text color +
         geom_vline(xintercept = -1, 
                    color = 'black', 
                    linetype = 'dashed', 
@@ -206,6 +197,15 @@ PPM1DTLeukemiavsWTLeukemia |>
                    color = 'black', 
                    linetype = 'dashed',
                    size = 1) +
+         geom_label_repel(aes(label = ifelse(Top10, gene, "")),
+                   nudge_x = 0.1, nudge_y = 0.1,  # Adjust these values as needed
+                   point.padding = 0.5,
+                   box.padding = unit(0.1, "cm"),
+                   label.size = unit(0.05, "cm"),
+                   force = 15,
+                   size = 5,  # Adjust text size
+                   color = "black",
+                   max.overlaps = 1000) +  # Adjust text color +
         scale_color_manual(values = c('blue','gray','red')) + 
         theme_minimal() +
         theme(legend.position = 'none',
@@ -217,5 +217,5 @@ PPM1DTLeukemiavsWTLeukemia |>
                                         size = 1)) + 
         ylim(c(0, 80))
 
-ggsave(filename = "volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
+ggsave(filename = "../volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
 ```
