@@ -4,7 +4,8 @@
 library(tidyverse)
 library(DEXSeq)
 ```
-# Preprocess the data 
+
+# Preprocess the data
 
 ```{r}
 count_matrix_path = "../CountMatrix.tsv"
@@ -12,6 +13,7 @@ metadata_path = "../metadata.csv"
 data = read.tsv(count_matrix_path)
 metadata = read.csv(metadata_path)
 ```
+
 Get featureID and groupID
 
 ```{r}
@@ -21,4 +23,3 @@ group_id = str_split_i(rows, "\\|", 2)
 ```
 
 # Use DEXSeq
-

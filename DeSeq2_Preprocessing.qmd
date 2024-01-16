@@ -97,7 +97,7 @@ PPM1DTLeukemiavsWTLeukemia_clean <- PPM1DTLeukemiavsWTLeukemia |>
 #write.csv(WTvsWTLeukemia_clean, '../WT_vs_WTLeukemia.csv')
 #write.csv(WTvsPPM1DTLeukemia_clean, '../WT_vs_PPM1DTLeukemia.csv')
 #write.csv(PPM1DTLeukemiavsWTLeukemia_clean , '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv')
-
+write.csv(PPM1DTLeukemiavsWTLeukemia, '../PP1DTLeukemia_vs_WTLeukemia_none_filtered.csv')
 ```
 
 ### **Variance stabilizing transformation**

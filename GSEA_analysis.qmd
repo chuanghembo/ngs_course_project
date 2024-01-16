@@ -2,35 +2,50 @@
 
 ```{r}
 library(tidyverse)
-library(clusterProfiler)
-library(org.Mm.eg.db)
-library(enrichplot)
+library(fgsea)
+library(msigdbr)
 ```
 
-## Load data
+## Rank data
 
 ```{r}
-data_path <- '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv'
-annotated_res <- read_csv(data_path)
+data_path <- '../PP1DTLeukemia_vs_WTLeukemia_none_filtered.csv'
+data <- read_csv(data_path)
 
-gene_list <- annotated_res |>
-        mutate(gene = str_remove(row, "\\..*")) |> 
-        pull(gene)
+ranked_genes <- data |>
+        na.omit() |> 
+        mutate(gene = str_remove(row, "\\..*")) |>
+        mutate(rank = -log10(padj)) |> 
+        arrange(-rank) |> 
+        select(gene, rank)
+
+gene_set
+```
+
+## Fetch geneset
+
+```{r}
+# Look at species
+msigdbr_species() 
+
+gene_set <- msigdbr(species = "Mus musculus",
+                    category = 'C5',
+                    subcategory = 'BP')
+
+gene_set <- gene_set |> as.list()
+
+gene_stat  <- ranked_genes |> 
+        select(rank) |> 
+        unlist() 
+
+names(gene_stat) <- ranked_genes$gene
+
+str(gene_stat)
 ```
 
 ```{r}
-ego <- enrichGO(gene = gene_list,
-                OrgDb = org.Mm.eg.db,
-                keyType = "ENSEMBL",
-                ont = "BP",  
-                # Biological Process, can also be "CC" (Cellular Component) or "MF"(Molecular Function)
-                pAdjustMethod = "BH",
-               qvalueCutoff = 0.05)
+fgseaRes <- fgsea(pathways = gene_set, 
+                  stats    = gene_stat)
 
-go_results <- as.data.frame(ego@result)
-
-go_results
-
-
-# Just missing the plot like figure 4c in the paper. We need NES normalized enrichment score
+fgseaRes
 ```

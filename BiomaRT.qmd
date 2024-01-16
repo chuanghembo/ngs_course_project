@@ -49,6 +49,8 @@ attr |> as_tibble() |>
 attr |> as_tibble() |> 
         filter(str_detect(name, 'ensembl'))
 
+attr_trans <- attr |> as_tibble() |> filter(str_detect(name, 'transcript'))
+
 # Submit Ensembl id in chunks and merge the result in the end
 # Ensembl can take around 500-1000 ensembl at the time
 chunk_size <- 100
