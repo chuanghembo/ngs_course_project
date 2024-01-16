@@ -115,7 +115,9 @@ data |>
                                        linetype = 'solid',
                                        size = 1),
         axis.ticks = element_line(color = "black", 
-                                        size = 1))
+                                        size = 1),
+        axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20))
 ggsave(filename = "../volcano_dexsq.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
 ```
 
