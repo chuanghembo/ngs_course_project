@@ -17,9 +17,8 @@ ranked_genes <- data |>
         mutate(gene = str_remove(row, "\\..*")) |>
         mutate(rank = -log10(padj)) |> 
         arrange(-rank) |> 
-        select(gene, rank)
+        dplyr::select(gene, rank)
 
-gene_set
 ```
 
 ## Fetch geneset
@@ -32,20 +31,46 @@ gene_set <- msigdbr(species = "Mus musculus",
                     category = 'C5',
                     subcategory = 'BP')
 
-gene_set <- gene_set |> as.list()
+BP_list = split(x = gene_set$ensembl_gene, f = gene_set$gs_name)
 
-gene_stat  <- ranked_genes |> 
-        select(rank) |> 
-        unlist() 
 
-names(gene_stat) <- ranked_genes$gene
 
-str(gene_stat)
 ```
 
 ```{r}
-fgseaRes <- fgsea(pathways = gene_set, 
-                  stats    = gene_stat)
+gene_stat  <- ranked_genes |> 
+        dplyr::select(rank) |> 
+        unlist() 
 
-fgseaRes
+names(gene_stat) <- ranked_genes$gene
+```
+
+```{r}
+fgseaRes <- fgsea(pathways = BP_list, stats = gene_stat)
+```
+
+```{r}
+dexsq <- read_tsv('../results_dexsq.tsv')
+```
+
+```{r}
+dexsq <- dexsq |> 
+        dplyr::select(groupID,padj) |> 
+        na.omit() |> 
+        mutate(gene = str_remove(groupID, "\\.\\d+$")) |>
+        mutate(rank = -log10(padj)) |> 
+        arrange(-rank) |> 
+        dplyr::select(gene,rank)
+```
+
+```{r}
+dexsq_stat  <- dexsq |> 
+        dplyr::select(rank) |> 
+        unlist()
+        
+names(dexsq_stat) <- dexsq$gene
+```
+
+```{r}
+dexsq_Res <- fgsea(pathways = BP_list, stats = dexsq_stat)
 ```
