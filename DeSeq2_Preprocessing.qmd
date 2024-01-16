@@ -160,6 +160,8 @@ anno <- anno |>
 PPM1DTLeukemiavsWTLeukemia$row <- ifelse(PPM1DTLeukemiavsWTLeukemia$row %in% anno$ensembl_gene_id_version, 
                      anno$external_gene_name.y[match(PPM1DTLeukemiavsWTLeukemia$row, anno$ensembl_gene_id_version)],
                      PPM1DTLeukemiavsWTLeukemia$row)
+
+WT_vs_WTLeukemia |> na.omit() |> nrow()
 ```
 
 ```{r}
@@ -183,8 +185,7 @@ PPM1DTLeukemiavsWTLeukemia |>
                gene = row) |>
         dplyr::select(-row) |> 
         ggplot(aes(log2FoldChange, -log10(padj))) +
-        geom_point(aes(color = catagory), size = 3) +
-        geom_point(aes(shape = ifelse(Top10, "", gene))) +
+        geom_point(aes(color = catagory, size = 3)) +
         geom_vline(xintercept = -1, 
                    color = 'black', 
                    linetype = 'dashed', 
@@ -215,7 +216,7 @@ PPM1DTLeukemiavsWTLeukemia |>
                                        size = 1),
               axis.ticks = element_line(color = "black", 
                                         size = 1)) + 
-        ylim(c(0, 80))
+              ylim(c(0, 80))
 
 ggsave(filename = "../volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
 ```
