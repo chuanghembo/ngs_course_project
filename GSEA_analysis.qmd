@@ -12,13 +12,17 @@ library(msigdbr)
 data_path <- '../PP1DTLeukemia_vs_WTLeukemia_none_filtered.csv'
 data <- read_csv(data_path)
 
-ranked_genes <- data |>
+data
+
+v2_ranked <- data |>
         na.omit() |> 
+        filter(padj < 0.05 & abs(log2FoldChange) > 1) |>  
         mutate(gene = str_remove(row, "\\..*")) |>
         mutate(rank = -log10(padj)) |> 
         arrange(-rank) |> 
         dplyr::select(gene, rank)
 
+v2_ranked
 ```
 
 ## Fetch geneset
@@ -28,25 +32,23 @@ ranked_genes <- data |>
 msigdbr_species() 
 
 gene_set <- msigdbr(species = "Mus musculus",
-                    category = 'C5',
-                    subcategory = 'BP')
+                    category = 'H')
 
 BP_list = split(x = gene_set$ensembl_gene, f = gene_set$gs_name)
 
-
-
+BP_list[2]
 ```
 
 ```{r}
-gene_stat  <- ranked_genes |> 
+v2_gene_stat <- v2_ranked |> 
         dplyr::select(rank) |> 
-        unlist() 
+        unlist()
 
-names(gene_stat) <- ranked_genes$gene
+names(v2_gene_stat) <- v2_ranked$gene
 ```
 
 ```{r}
-fgseaRes <- fgsea(pathways = BP_list, stats = gene_stat)
+v2_fgseaRes <- fgsea(pathways = BP_list, stats = v2_gene_stat)
 ```
 
 ```{r}
@@ -54,23 +56,75 @@ dexsq <- read_tsv('../results_dexsq.tsv')
 ```
 
 ```{r}
-dexsq <- dexsq |> 
-        dplyr::select(groupID,padj) |> 
+dexseq_ranked <- dexsq |>
+        dplyr::select(groupID, padj, log2fold_PPM1DT_leukemia_.wild_type_leukemia) |> 
         na.omit() |> 
-        mutate(gene = str_remove(groupID, "\\.\\d+$")) |>
+        filter(padj < 0.05 & abs(log2fold_PPM1DT_leukemia_.wild_type_leukemia) > 1) |>  
+        mutate(gene = str_remove(groupID, "\\..*")) |>
         mutate(rank = -log10(padj)) |> 
         arrange(-rank) |> 
-        dplyr::select(gene,rank)
+        dplyr::select(gene, rank)
+dexseq_ranked
 ```
 
 ```{r}
-dexsq_stat  <- dexsq |> 
+dexseq_stat  <- dexseq_ranked |> 
         dplyr::select(rank) |> 
         unlist()
         
-names(dexsq_stat) <- dexsq$gene
+names(dexseq_stat) <- dexseq_ranked$gene
 ```
 
 ```{r}
-dexsq_Res <- fgsea(pathways = BP_list, stats = dexsq_stat)
+dexseq_Res <- fgsea(pathways = BP_list, stats = dexseq_stat)
+```
+
+```{r}
+v2_fgseaRes |>
+        mutate(LOGp = -log10(padj)) |>
+        mutate(Size = case_when((LOGp >= 0.05) & (LOGp < 0.10) ~ "FDR < 0.10",
+                                (LOGp >= 0.10) & (LOGp < 0.15) ~ "FDR < 0.15",
+                                 LOGp >= 0.15 ~ "FDR > 0.15")) |> 
+        arrange(abs(NES)) |> 
+        head(20) |> 
+        ggplot(aes(x = NES, y = pathway, size = Size, fill = LOGp)) +
+        geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
+#        scale_size_continuous(range = c(2, 10)) + # Adjusts the size of the bubbles
+        scale_fill_gradient(low = "blue", high = "red") + # Color gradient for significance
+        theme_minimal() +
+        labs(x = "NES",
+        y = "Pathway",
+        size = "Significance (-LOGp-Value)") +
+        theme(legend.position = "right", 
+              panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank()) +
+        geom_vline(xintercept = 0, 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) + 
+        guides(fill = "none")
+
+ggsave("DESeq_FGSEA.png", height = 8, width = 8, bg = "white")
+```
+
+```{r}
+dexseq_Res |>
+        mutate(LOGp = -log10(padj)) |>
+        arrange(abs(NES)) |> 
+        head(20) |> 
+        ggplot(aes(x = NES, y = pathway, size = LOGp, fill = LOGp)) +
+        geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
+        scale_fill_gradient(low = "blue", high = "red") + # Color gradient for significance
+        theme_minimal() +
+        labs(x = "NES",
+        y = "Pathway",
+        size = "Significance (-LOGp-Value)") +
+        theme(legend.position = "right", 
+              panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank()) +
+        geom_vline(xintercept = 0, 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) + 
+        guides(fill = "none")
 ```
