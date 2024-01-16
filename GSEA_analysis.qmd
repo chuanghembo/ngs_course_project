@@ -84,17 +84,18 @@ v2_fgseaRes |>
         mutate(LOGp = -log10(padj)) |>
         mutate(Size = case_when((LOGp >= 0.05) & (LOGp < 0.10) ~ "FDR < 0.10",
                                 (LOGp >= 0.10) & (LOGp < 0.15) ~ "FDR < 0.15",
-                                 LOGp >= 0.15 ~ "FDR > 0.15")) |> 
+                                 LOGp >= 0.15 ~ "FDR > 0.15")) |>
+        mutate(FC = case_when(NES > 0 ~ 1,
+                              NES < 0 ~ -1)) |>
         arrange(abs(NES)) |> 
         head(20) |> 
-        ggplot(aes(x = NES, y = pathway, size = Size, fill = LOGp)) +
+        ggplot(aes(x = NES, y = pathway, size = Size, fill = FC)) +
         geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
-#        scale_size_continuous(range = c(2, 10)) + # Adjusts the size of the bubbles
-        scale_fill_gradient(low = "blue", high = "red") + # Color gradient for significance
+        scale_fill_gradient(low = "blue", high = "red") +
         theme_minimal() +
         labs(x = "NES",
         y = "Pathway",
-        size = "Significance (-LOGp-Value)") +
+        size = "FDR") +
         theme(legend.position = "right", 
               panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank()) +
@@ -110,15 +111,20 @@ ggsave("DESeq_FGSEA.png", height = 8, width = 8, bg = "white")
 ```{r}
 dexseq_Res |>
         mutate(LOGp = -log10(padj)) |>
+        mutate(Size = case_when((LOGp < 0.015) ~ "FDR < 0.10",
+                                (LOGp >= 0.015) & (LOGp < 0.02) ~ "FDR < 0.15",
+                                 LOGp >= 0.02 ~ "FDR > 0.15")) |>
+        mutate(FC = case_when(NES > 0 ~ 1,
+                              NES < 0 ~ -1)) |> 
         arrange(abs(NES)) |> 
         head(20) |> 
-        ggplot(aes(x = NES, y = pathway, size = LOGp, fill = LOGp)) +
+        ggplot(aes(x = NES, y = pathway, size = Size, fill = FC)) +
         geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
-        scale_fill_gradient(low = "blue", high = "red") + # Color gradient for significance
+        scale_fill_gradient(low = "blue", high = "red") +
         theme_minimal() +
         labs(x = "NES",
         y = "Pathway",
-        size = "Significance (-LOGp-Value)") +
+        size = "FDR") +
         theme(legend.position = "right", 
               panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank()) +
@@ -127,4 +133,6 @@ dexseq_Res |>
                    linetype = 'dashed',
                    size = 1) + 
         guides(fill = "none")
+
+ggsave("DEXSeq_FGSEA.png", height = 8, width = 8, bg = "white")
 ```
