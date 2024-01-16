@@ -1,0 +1,223 @@
+## Library
+
+```{r}
+library(tidyverse)
+library(DESeq2)
+library(ggrepel)
+```
+
+## Load data
+
+```{r}
+data_path <- "../CountMatrixRefAlligned.tsv"
+meta_path <-"../meta_data.csv"
+
+
+count_matrix <- read.csv(data_path, 
+                         row.names = "Geneid", 
+                         sep = '\t') |> 
+        as.matrix()
+
+meta_data <- read.csv(meta_path,
+                      row.names = 1)
+
+```
+
+Convert the columns in metadata to factor
+
+```{r}
+meta_data <-  meta_data |> 
+              mutate(condition = factor(condition, 
+                                        levels = c('wild_type',
+                                                   'PPM1DT_leukemia',
+                                                   'wild_type_leukemia'
+                                                   )))
+```
+
+## Check data format
+
+In DESeq2, the colnames of the count-matrix must be the same and in same order as the rownames of the meta_data
+
+```{r}
+all(rownames(meta_data) == colnames(data))
+```
+
+## DEseq2 analysis
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = count_matrix,
+                              colData = meta_data,
+                              design = ~ condition)
+
+dds <- DESeq(dds)
+```
+
+Looking at result from DEseq
+
+```{r}
+meta_data
+
+WTvsWTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'wild_type_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+
+WTvsPPM1DTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+PPM1DTLeukemiavsWTLeukemia <- results(dds, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type_leukemia'),
+                                          tidy = TRUE) 
+
+# p.adj
+# log2fc > 1
+WTvsWTLeukemia_clean <- WTvsWTLeukemia |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+WTvsPPM1DTLeukemia_clean <- WTvsPPM1DTLeukemia |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+PPM1DTLeukemiavsWTLeukemia_clean <- PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+
+#write.csv(WTvsWTLeukemia_clean, '../WT_vs_WTLeukemia.csv')
+#write.csv(WTvsPPM1DTLeukemia_clean, '../WT_vs_PPM1DTLeukemia.csv')
+#write.csv(PPM1DTLeukemiavsWTLeukemia_clean , '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv')
+write.csv(PPM1DTLeukemiavsWTLeukemia, '../PP1DTLeukemia_vs_WTLeukemia_none_filtered.csv')
+```
+
+### **Variance stabilizing transformation**
+
+```{r}
+vsd <- rlog(dds, blind=FALSE)
+```
+
+## Visualization
+
+### PCA
+
+```{r}
+plotPCA(vsd, intgroup=c("condition")) +
+        scale_color_manual(
+                values = c("chartreuse3", "red", "black"),
+                name = "group", 
+                labels = c("Health",
+                           expression(Ppm1d^"T/+"),
+                           "WT")
+                ) +
+        theme_minimal() +
+        theme(legend.text.align = 0,
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 0.5),
+              axis.ticks = element_line(size = 0.5,
+                                        linetype = 'solid',
+                                        color = 'black')) 
+```
+
+### Volcano plot
+
+```{r}
+#load annotation
+anno <- read.csv('../PPM1DTLeukemia_vs_WTLeukemia_annot.csv')
+
+# select significant genes
+siggene <- PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        mutate(catagory = case_when(
+                (padj < 0.05 & log2FoldChange > 1) ~ 'upreg',
+                (padj < 0.05 & log2FoldChange < -1) ~ 'downreg',TRUE ~ 'none_sig'),
+               Top10 = case_when(
+                       log2FoldChange > 12 ~ TRUE,
+                       -log10(padj) > 25 & log2FoldChange > 1 ~ TRUE,TRUE ~ FALSE),gene = row) |> 
+        arrange(pvalue) |> 
+        filter(Top10 == 'TRUE') |> 
+        dplyr::select(gene) 
+
+#annotate
+siggene <- siggene |> 
+        mutate(external_gene_name = c('ZBED3','Marcks','Ly6d','Extl3','Igf2bp3','Runx3','Pcbp4','Plch1','Rgs7bp','A630031M04Rik','Gdf6','Insm1','Hnf1b'))
+
+#full join
+anno <- anno |> 
+        full_join(siggene,  by= c('ensembl_gene_id_version' = 'gene') )
+#match the table and change the row name
+PPM1DTLeukemiavsWTLeukemia$row <- ifelse(PPM1DTLeukemiavsWTLeukemia$row %in% anno$ensembl_gene_id_version, 
+                     anno$external_gene_name.y[match(PPM1DTLeukemiavsWTLeukemia$row, anno$ensembl_gene_id_version)],
+                     PPM1DTLeukemiavsWTLeukemia$row)
+
+count_matrix |> rownames() 
+WTvsPPM1DTLeukemia_clean |> filter(str_detect(row, 'ENSMUSG00000020525'))
+```
+
+```{r}
+vlines <- data.frame(xintercepts = c(-1, 1), colors = c('gray', 'gray'))
+
+
+# Red FDR < 0.05 && log2FC > 1
+# Blue FDR < 0.05 && log2FC < -1
+# Gray otherwise
+
+# Display -log10(padj) > 25 and log2FC > 1 or log2FC > 12
+
+PPM1DTLeukemiavsWTLeukemia |> 
+        na.omit() |> 
+        mutate(catagory = case_when((padj < 0.05 & log2FoldChange > 1) ~ 'upreg',
+                                   (padj < 0.05 & log2FoldChange < -1) ~ 'downreg',
+                                   TRUE ~ 'none_sig'),
+               Top10 = case_when(log2FoldChange > 12 ~ TRUE,
+                                 -log10(padj) > 25 & log2FoldChange > 1 ~ TRUE,
+                                 TRUE ~ FALSE),
+               gene = row) |>
+        dplyr::select(-row) |> 
+        ggplot(aes(log2FoldChange, -log10(padj))) +
+        geom_point(aes(color = catagory, size = 3)) +
+        geom_vline(xintercept = -1, 
+                   color = 'black', 
+                   linetype = 'dashed', 
+                   size = 1) +
+        geom_vline(xintercept = 1, 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) +
+        geom_hline(yintercept = -log10(0.05), 
+                   color = 'black', 
+                   linetype = 'dashed',
+                   size = 1) +
+         geom_label_repel(aes(label = ifelse(Top10, gene, "")),
+                   nudge_x = 0.1, nudge_y = 0.1,  # Adjust these values as needed
+                   point.padding = 0.5,
+                   box.padding = unit(0.1, "cm"),
+                   label.size = unit(0.05, "cm"),
+                   force = 15,
+                   size = 5,  # Adjust text size
+                   color = "black",
+                   max.overlaps = 1000) +  # Adjust text color +
+        scale_color_manual(values = c('blue','gray','red')) + 
+        theme_minimal() +
+        theme(legend.position = 'none',
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 1),
+              axis.ticks = element_line(color = "black", 
+                                        size = 1)) + 
+              ylim(c(0, 80))
+
+ggsave(filename = "../volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
+```
