@@ -1,0 +1,128 @@
+## Quarto
+
+```{r}
+library(tidyverse)
+library(biomaRt)
+library(readr)
+library(forcats)
+library(patchwork)
+library(stringr)
+library(ggrepel)
+library(VennDiagram)
+```
+
+```{r}
+ensembl <- read_csv("result.csv") |>
+  select(c("ensembl_gene_id_version", "external_gene_name")) |> 
+  distinct() |>
+  rename(groupID = ensembl_gene_id_version)
+names <- read_csv("gene_names.csv")
+data <- read_tsv("results_dexsq.tsv") |>
+  mutate(geneID = str_split_i(groupID, "\\.", 1)) |>
+  relocate(geneID) |>
+  left_join(names, by="geneID")
+ppm <- read_csv("PPM1DTLeukemia_vs_WTLeukemia_clean.csv") |>
+  mutate(geneID = str_split_i(row, "\\.", 1)) |>
+  select(geneID) |>
+  distinct()
+data
+```
+
+```{r}
+data_gene <- data |>
+  filter(!(is.na(padj)) & padj < 0.05) |>
+  filter(abs(log2fold_PPM1DT_leukemia_.wild_type_leukemia) > 1) |>
+  select(geneID) |>
+  distinct()
+data_inter <- data_gene |> inner_join(ppm, by = "geneID")
+```
+
+```{r}
+grid.newpage()                                       
+draw.pairwise.venn(area1 = 3061,                      
+                   area2 = 759,
+                   cross.area = 177,
+                   category = c("Reference alignment", "Pseudo alignment"),
+                   ext.text = FALSE,
+                   cat.pos = c(0,0),
+                   fill = c("blue", "#4981BF"),
+                   print.mode = c("raw", "percent"))
+
+
+```
+
+```{r}
+data <- data |> left_join(ensembl, by = "groupID") |>
+  relocate("external_gene_name")
+```
+
+```{r}
+data_up <- data |>
+  filter(padj < 0.05) |>
+  mutate(
+  log2fold = log2(PPM1DT_leukemia/wild_type_leukemia) 
+    ) |>
+  arrange(log2fold) |>
+  tail(10) |>
+  mutate("padj_point" = FALSE)
+
+data_padj_up <- data |>
+  mutate(
+  log2fold = log2(PPM1DT_leukemia/wild_type_leukemia) 
+    ) |>
+  filter(log2fold > 1) |>
+  arrange(padj) |>
+  head(10) |>
+  mutate("padj_point" = TRUE)
+data_tot <- rbind(data_up, data_padj_up)
+data_intersect <- data_up |> inner_join(data_padj_up, by = "groupID") |> rename(log2fold = log2fold.x) |>
+  rename(padj = padj.x)
+```
+
+```{r}
+data_sig <- data |>
+  mutate(
+  log2fold = log2(PPM1DT_leukemia/wild_type_leukemia) 
+    ) |>
+  filter(padj < 0.05 & abs(log2fold) > 1)
+data |>
+  mutate(
+    log2fold = log2(PPM1DT_leukemia/wild_type_leukemia) 
+      ) |>
+  ggplot(aes(log2fold, -log10(padj), size = 2)) +
+  geom_point(color = 'grey') +
+  geom_point(data = data_sig |> filter(log2fold>0), color = 'red') +
+  geom_point(data = data_sig |> filter(log2fold<0), color = 'blue') +
+  geom_point(data = data_tot, color = 'black', shape = 21) +
+  geom_hline(yintercept = -log10(0.05), linetype = 'dashed', size = 1) +
+  geom_vline(xintercept = -1, linetype = 'dashed', size = 1) +
+  geom_vline(xintercept = 1, linetype = 'dashed', size = 1) +
+  geom_label_repel(data = data_tot, aes(label = gene),
+                   nudge_x = 0.1, nudge_y = 0.1,  
+                   point.padding = 0.5,
+                   box.padding = unit(0.1, "cm"),
+                   label.size = unit(0.05, "cm"),
+                   force = 15,
+                   size = 5, 
+                   color = "black",
+                   max.overlaps = 1000) +
+  theme_bw() +
+  labs(x = "log2FoldChange") +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 1),
+        axis.ticks = element_line(color = "black", 
+                                        size = 1))
+ggsave(filename = "../volcano_dexsq.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
+```
+
+```{r fig.height=6}
+ggplot(data = data_tot, aes(x=log2fold, y=fct_reorder(groupID, log2fold), color = -log10(padj), size = -log10(padj))) +
+  geom_point() +
+  theme_minimal() +
+  labs(y = "Gene ID") 
+
+```
