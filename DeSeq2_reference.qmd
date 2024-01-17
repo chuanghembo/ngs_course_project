@@ -208,7 +208,10 @@ PPM1DTLeukemiavsWTLeukemia |>
                    max.overlaps = 1000) +  # Adjust text color +
         scale_color_manual(values = c('blue','gray','red')) + 
         theme_minimal() +
-        theme(legend.position = 'none',
+        labs(title = 'DEseq2') +
+        theme(plot.title = element_text(hjust = 0.5,
+                                        size = 25),
+              legend.position = 'none',
               panel.grid = element_blank(),
               axis.line = element_line(color = 'black',
                                        linetype = 'solid',
