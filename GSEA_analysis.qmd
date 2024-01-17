@@ -4,6 +4,7 @@
 library(tidyverse)
 library(fgsea)
 library(msigdbr)
+library(patchwork)
 ```
 
 ## Rank data
@@ -80,23 +81,27 @@ dexseq_Res <- fgsea(pathways = BP_list, stats = dexseq_stat)
 ```
 
 ```{r}
-v2_fgseaRes |>
+v2_fgseaRes <- v2_fgseaRes |>
         mutate(LOGp = -log10(padj)) |>
-        mutate(Size = case_when((LOGp >= 0.05) & (LOGp < 0.10) ~ "FDR < 0.10",
+        mutate(Size = case_when( (LOGp < 0.10) ~ "FDR < 0.10",
                                 (LOGp >= 0.10) & (LOGp < 0.15) ~ "FDR < 0.15",
                                  LOGp >= 0.15 ~ "FDR > 0.15")) |>
         mutate(FC = case_when(NES > 0 ~ 1,
                               NES < 0 ~ -1)) |>
         arrange(abs(NES)) |> 
-        head(20) |> 
-        ggplot(aes(x = NES, y = pathway, size = Size, fill = FC)) +
+        head(20) 
+        
+p1 <- ggplot(v2_fgseaRes,
+             aes(x = NES, y = pathway, size = Size, fill = FC)) +
         geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
         scale_fill_gradient(low = "blue", high = "red") +
         theme_minimal() +
-        labs(x = "NES",
-        y = "Pathway",
-        size = "FDR") +
-        theme(legend.position = "right", 
+        labs(title = 'DEseq2',
+             x = "NES",
+             y = NULL,
+        size = NULL) +
+        theme(plot.title = element_text(hjust = 0.5, size =10),
+              legend.position = "none", 
               panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank()) +
         geom_vline(xintercept = 0, 
@@ -105,27 +110,32 @@ v2_fgseaRes |>
                    size = 1) + 
         guides(fill = "none")
 
-ggsave("DESeq_FGSEA.png", height = 8, width = 8, bg = "white")
+ggsave("DESeq_FGSEA.png", p1,height = 8, width = 8, bg = "white")
+
 ```
 
 ```{r}
-dexseq_Res |>
+dexseq_Res <- dexseq_Res |>
         mutate(LOGp = -log10(padj)) |>
         mutate(Size = case_when((LOGp < 0.015) ~ "FDR < 0.10",
-                                (LOGp >= 0.015) & (LOGp < 0.02) ~ "FDR < 0.15",
-                                 LOGp >= 0.02 ~ "FDR > 0.15")) |>
+                                (LOGp >= 0.015) & (LOGp < 0.15) ~ "FDR < 0.15",
+                                 LOGp >= 0.15 ~ "FDR > 0.15")) |>
         mutate(FC = case_when(NES > 0 ~ 1,
                               NES < 0 ~ -1)) |> 
         arrange(abs(NES)) |> 
-        head(20) |> 
-        ggplot(aes(x = NES, y = pathway, size = Size, fill = FC)) +
+        head(20) 
+
+p2 <- ggplot(dexseq_Res,
+             aes(x = NES, y = pathway, size = Size, fill = FC)) +
         geom_point(alpha = 0.75,shape = 21, color = "black", stroke = 1) +
         scale_fill_gradient(low = "blue", high = "red") +
         theme_minimal() +
-        labs(x = "NES",
-        y = "Pathway",
-        size = "FDR") +
-        theme(legend.position = "right", 
+        labs(title = 'DEXseq',
+             x = "NES",
+             y = NULL,
+        size = 'FDR') +
+        theme(plot.title = element_text(hjust = 0.5, size =10),
+              legend.position = "right", 
               panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank()) +
         geom_vline(xintercept = 0, 
@@ -133,6 +143,12 @@ dexseq_Res |>
                    linetype = 'dashed',
                    size = 1) + 
         guides(fill = "none")
+        
 
-ggsave("DEXSeq_FGSEA.png", height = 8, width = 8, bg = "white")
+ggsave("DEXSeq_FGSEA.png", p2,height = 8, width = 8, bg = "white")
+```
+
+```{r}
+p3 <- p1+p2
+ggsave("combined.png", p3,height = 8, width = 15, bg = "white")
 ```
