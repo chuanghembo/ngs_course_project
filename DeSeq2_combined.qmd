@@ -1,26 +1,241 @@
----
-title: "Combined plot for alignment"
-format: html
-editor: visual
----
-
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Library
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(DESeq2)
+library(ggrepel)
+library(ggplot2)
+library(cowplot)
 ```
 
-You can add options to executable code like this
+## Load data ref align
 
 ```{r}
-#| echo: false
-2 * 2
+data_path_r <- "~/DTU 2024F/22126/Project_R/CountMatrixRefAlligned.tsv"
+meta_path_r <-"~/DTU 2024F/22126/Project_R/meta_data.csv"
+
+
+count_matrix_r <- read.csv(data_path_r, 
+                         row.names = "Geneid", 
+                         sep = '\t') |> 
+        as.matrix()
+
+meta_data_r <- read.csv(meta_path_r,
+                      row.names = 1)
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Load data pseudo align
+
+```{r}
+data_path_p <- "~/DTU 2024F/22126/Project_R/CountTranscript.tsv"
+meta_path_p <-"~/DTU 2024F/22126/Project_R/meta_data_DEXseq.csv"
+
+
+count_matrix_p <- read.csv(data_path_p, 
+                         row.names = "Geneid", 
+                         sep = '\t') |> 
+        as.matrix()
+
+meta_data_p <- read.csv(meta_path_p,
+                      row.names = 1)
+```
+
+# ref processing
+
+Convert the columns in metadata to factor
+```{r}
+meta_data_r <-  meta_data_r |> 
+              mutate(condition = factor(condition, 
+                                        levels = c('wild_type',
+                                                   'PPM1DT_leukemia',
+                                                   'wild_type_leukemia'
+                                                   )))
+```
+## Check data format
+
+In DESeq2, the colnames of the count-matrix must be the same and in same order as the rownames of the meta_data
+
+```{r}
+all(rownames(meta_data_r) == colnames(data))
+```
+## DEseq2 analysis
+
+```{r}
+dds_r <- DESeqDataSetFromMatrix(countData = count_matrix_r,
+                              colData = meta_data_r,
+                              design = ~ condition)
+
+dds_r <- DESeq(dds_r)
+```
+
+Looking at result from DEseq
+
+```{r}
+meta_data_r
+
+WTvsWTLeukemia_r <- results(dds_r, 
+                             contrast= c('condition', 
+                                         'wild_type_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+
+WTvsPPM1DTLeukemia_r <- results(dds_r, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type'),
+                                          tidy = TRUE) 
+
+PPM1DTLeukemiavsWTLeukemia_r <- results(dds_r, 
+                             contrast= c('condition', 
+                                         'PPM1DT_leukemia',
+                                         'wild_type_leukemia'),
+                                          tidy = TRUE) 
+
+# p.adj
+# log2fc > 1
+WTvsWTLeukemia_clean_r <- WTvsWTLeukemia_r |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+WTvsPPM1DTLeukemia_clean_r <- WTvsPPM1DTLeukemia_r |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+PPM1DTLeukemiavsWTLeukemia_clean_r <- PPM1DTLeukemiavsWTLeukemia_r |> 
+        na.omit() |> 
+        filter(padj < 0.05,
+               abs(log2FoldChange) > 1)
+
+
+#write.csv(WTvsWTLeukemia_clean, '../WT_vs_WTLeukemia.csv')
+#write.csv(WTvsPPM1DTLeukemia_clean, '../WT_vs_PPM1DTLeukemia.csv')
+#write.csv(PPM1DTLeukemiavsWTLeukemia_clean , '../PPM1DTLeukemia_vs_WTLeukemia_clean.csv')
+write.csv(PPM1DTLeukemiavsWTLeukemia_r, '../PP1DTLeukemia_vs_WTLeukemia_none_filtered.csv')
+```
+
+
+
+### **Variance stabilizing transformation**
+
+```{r}
+vsd_r <- rlog(dds_r, blind=FALSE)
+```
+
+## Visualization
+
+### PCA
+
+```{r}
+ref_aligned <- plotPCA(vsd_r, intgroup=c("condition")) +
+        scale_color_manual(
+                values = c("chartreuse3", "red", "black"),
+                name = "group", 
+                labels = c("Health",
+                           expression(Ppm1d^"T/+"),
+                           "WT")
+                ) +
+        theme_minimal() +
+        theme(plot.title = element_text(size = 30),
+              legend.text = element_text(size = 20),
+              legend.text.align = 0,
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 0.5),
+              axis.ticks = element_line(size = 0.5,
+                                        linetype = 'solid',
+                                        color = 'black'),
+              axis.title = element_text(size = 20),
+              axis.text = element_text(size = 20)) + 
+  ggtitle('Ref aligned') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(-50, 99) +
+  ylim(-77, 65)
+
+print(ref_aligned)
+```
+
+
+# Pseudo_processing
+
+Convert the columns in metadata to factor and remove NA in count matrix
+
+```{r}
+meta_data_p <-  meta_data_p |> 
+              mutate(condition = factor(condition, 
+                                        levels = c('wild_type',
+                                                   'PPM1DT_leukemia',
+                                                   'wild_type_leukemia'
+                                                   )))
+count_matrix_p <- count_matrix_p |> 
+        na.omit()
+```
+## Check data format
+
+In DESeq2, the colnames of the count-matrix must be the same and in same order as the rownames of the meta_data
+
+```{r}
+all(rownames(meta_data_p) == colnames(count_matrix_p))
+```
+
+## DEseq2 analysis
+
+```{r}
+dds_p <- DESeqDataSetFromMatrix(countData = count_matrix_p,
+                              colData = meta_data_p,
+                              design = ~ condition)
+
+dds_p <- DESeq(dds_p)
+```
+
+## Variance Stabilizing Transformation
+
+```{r}
+vsd_p <- rlog(dds_p, blind=FALSE)
+```
+
+```{r}
+pseudo_aligned <- plotPCA(vsd_p, intgroup=c("condition")) +
+        scale_color_manual(
+                values = c("chartreuse3", "red", "black"),
+                name = "group", 
+                labels = c("Health",
+                           expression(Ppm1d^"T/+"),
+                           "WT")
+                ) +
+        theme_minimal() +
+        theme(plot.title = element_text(size = 30),
+              legend.text = element_text(size = 20),
+              legend.text.align = 0,
+              panel.grid = element_blank(),
+              axis.line = element_line(color = 'black',
+                                       linetype = 'solid',
+                                       size = 0.5),
+              axis.ticks = element_line(size = 0.5,
+                                        linetype = 'solid',
+                                        color = 'black'),
+              axis.title = element_text(size = 20),
+              axis.text = element_text(size = 20)) +
+  ggtitle('Pseudo aligned') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(-50, 99) +
+  ylim(-77, 65) 
+
+print(pseudo_aligned)
+```
+
+
+
+
+```{r}
+combined <- plot_grid(ref_alignde, pseudo_aligned, ncol = 2)
+#combined_plot <- plot_grid(pca_plot1, pca_plot2, labels = c("Plot 1", "Plot 2"), ncol = 2)
+ggsave("ref_aligned.png", ref_aligned, width = 8, height = 8)
+ggsave("pseudo_aligned.png", pseudo_aligned, width = 8, height = 8)
+```
+
+
