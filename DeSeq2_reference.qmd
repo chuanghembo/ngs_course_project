@@ -161,8 +161,6 @@ PPM1DTLeukemiavsWTLeukemia$row <- ifelse(PPM1DTLeukemiavsWTLeukemia$row %in% ann
                      anno$external_gene_name.y[match(PPM1DTLeukemiavsWTLeukemia$row, anno$ensembl_gene_id_version)],
                      PPM1DTLeukemiavsWTLeukemia$row)
 
-count_matrix |> rownames() 
-WTvsPPM1DTLeukemia_clean |> filter(str_detect(row, 'ENSMUSG00000020525'))
 ```
 
 ```{r}
@@ -216,7 +214,9 @@ PPM1DTLeukemiavsWTLeukemia |>
                                        linetype = 'solid',
                                        size = 1),
               axis.ticks = element_line(color = "black", 
-                                        size = 1)) + 
+                                        size = 1),
+              axis.title = element_text(size = 20),
+              axis.text = element_text(size = 15)) + 
               ylim(c(0, 80))
 
 ggsave(filename = "../volcano.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
