@@ -107,7 +107,7 @@ data |>
                    color = "black",
                    max.overlaps = 1000) +
   theme_bw() +
-  labs(x = "log2FoldChange") +
+  labs(title = "DEXseq", x = "log2FoldChange") +
   theme(legend.position = "none",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -117,7 +117,8 @@ data |>
         axis.ticks = element_line(color = "black", 
                                         size = 1),
         axis.text = element_text(size = 15),
-        axis.title = element_text(size = 20))
+        axis.title = element_text(size = 20),
+        title = element_text(size = 30))
 ggsave(filename = "../volcano_dexsq.png", scale = 2, height = 15, width = 15, units = "cm", bg = "white")
 ```
 
